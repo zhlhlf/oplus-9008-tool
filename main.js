@@ -212,7 +212,8 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
       `--port=\\\\.\\${port}`,
       '--configure=cmd.xml',
       '--memoryname=ufs',
-      '--noprompt', '--mainoutputdir=.\\'
+      '--noprompt',
+      '--mainoutputdir=.\\'
     ], BIN_DIR);
 
     logStep('Initialization Complete');
@@ -249,10 +250,11 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
           '--memoryname=UFS',
           `--search_path=${searchPath}`,
           `--sendxml=${xmlFilesArg}`,
+          '--special_rw_mode=oplus_gptbackup',
           '--noprompt'
         ]
       },
-      read: { 
+      read: {
         logLabel: `Reading XML: ${fileNames}`,
         args: [
           `--port=\\\\.\\${port}`,
@@ -273,9 +275,11 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
     logStep(operation.logLabel);
 
     await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
+    dialog.showMessageBox(mainWindow, { type: 'info', title: 'Success', message: 'Operation completed successfully' });
     return { success: true };
   } catch (error) {
     log(`\n[ERROR] ${error.message}\n`);
+    dialog.showMessageBox(mainWindow, { type: 'error', title: 'Error', message: error.message });
     return { success: false, error: error.message };
   }
 });
@@ -356,7 +360,6 @@ async function prepareMiscFlash(port, txtValue) {
     ''
   ].join('\n');
   fs.writeFileSync(miscXmlPath, miscXmlContent);
-  console.log(miscXmlContent)
 
   logStep('Flashing misc partition update');
   await runCommand(`"${fhLoaderPath}"`, [
