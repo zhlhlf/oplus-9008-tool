@@ -1,0 +1,231 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #000000;
+  padding: 0;
+  margin: 0;
+  color: #333;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-title {
+  text-align: center;
+  color: #e87e74;
+  margin: 10px 0;
+  font-size: 22px;
+  flex-shrink: 0;
+  font-style: italic;
+}
+
+.container {
+  max-width: 100%;
+  margin: 0;
+  background: rgb(5, 0, 0);
+  padding: 10px;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.left-panel {
+  flex: 1.6;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  border-right: 1px solid #eee;
+  padding-right: 10px;
+}
+
+.left-panel h2 {
+  color: red;
+  font-size: 25px;
+}
+
+.right-panel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+h1 {
+  /* Old h1 style, keeping just in case, but app-title overrides for the main one */
+  text-align: center;
+  color: #0078d4;
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+h2 {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.section {
+  margin-bottom: 15px;
+}
+
+.section.compact {
+  background: #faebeb;
+  padding: 15px;
+  border-radius: 14px;
+}
+
+.form-group {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+label {
+  width: 80px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 5px;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+input[type="text"]:read-only {
+  background-color: white;
+  /* Make it look interactive */
+  cursor: default;
+}
+
+button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #e0e0e0;
+  transition: background-color 0.2s;
+  font-size: 13px;
+}
+
+#clear-logs-btn {
+  background-color: #c147fa;
+}
+
+.small-btn {
+  padding: 4px 8px;
+  min-width: 30px;
+}
+
+.primary-btn {
+  background-color: #0078d4;
+  color: white;
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.secondary-btn {
+  background-color: #107c10;
+  color: white;
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+#logs {
+  padding: 10px;
+  flex: 1;
+  overflow: auto;
+  font-family: 'Consolas', monospace;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  font-size: 11px;
+  color: #c147fa;
+  user-select: none;
+  position: relative;
+}
+
+#logs > * {
+  user-select: text;
+}
+
+#port-display {
+  font-weight: bold;
+  color: #0078d4;
+  margin-right: 10px;
+}
+
+#refresh-port {
+  background-color: #0078d4;
+  color: white;
+}
+
+#refresh-port:hover {
+  background-color: #106ebe;
+}
+
+.table-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.progress-container {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  height: 20px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  background-color: #0078d4;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 2px;
+  color: #666;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th,
+td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f5f5f5;
+  position: sticky;
+  top: 0;
+}
+
+tr:hover {
+  background-color: #f9f9f9;
+}

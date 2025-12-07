@@ -1,0 +1,8 @@
+node_modules
+dist
+release
+bin/tmp
+bin/cmd.xml
+bin/res
+operation.log
+package-lock.json
