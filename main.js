@@ -145,21 +145,21 @@ ipcMain.handle('find-port', async () => {
 
 ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => {
   try {
-    logStep('Starting Initialization Process');
+    logStep('开始初始化流程');
 
     // 1. Send device programmer (if provided)
     if (devprg) {
-      logStep('Sending Device Programmer');
+      logStep('发送设备程序（Device Programmer）');
       const qSaharaPath = path.join(BIN_DIR, 'QSaharaServer.exe');
       // Remove manual quotes around paths, spawn handles escaping
       await runCommand(`"${qSaharaPath}"`, ['-p', `\\\\.\\${port}`, '-s', `13:${devprg}`], BIN_DIR);
 
-    }
-    logStep('Starting Initialization Process');
+  }
+  logStep('继续初始化流程');
 
     // 2. Send digest (if provided)
     if (digest) {
-      logStep('Sending Digest & Verify');
+      logStep('发送 Digest 并校验');
 
       await runCommand(`"${fhLoaderPath}"`, [
         `--port=\\\\.\\${port}`,
@@ -182,7 +182,7 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
 
     // 4. Send sig (if provided)
     if (sig) {
-      logStep('Sending Signature & Sha256Init');
+      logStep('发送 Signature 并执行 Sha256Init');
 
       await runCommand(`"${fhLoaderPath}"`, [
         `--port=\\\\.\\${port}`,
@@ -216,10 +216,10 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
       '--mainoutputdir=.\\'
     ], BIN_DIR);
 
-    logStep('Initialization Complete');
+  logStep('初始化完成');
     return { success: true };
   } catch (error) {
-    log(`\n[ERROR] ${error.message}\n`);
+    log(`\n[错误] ${error.message}\n`);
     return { success: false, error: error.message };
   }
 });
@@ -244,7 +244,7 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
 
     const operations = {
       run: {
-        logLabel: `Running XML: ${fileNames}`,
+        logLabel: `执行 XML 写入：${fileNames}`,
         args: [
           `--port=\\\\.\\${port}`,
           '--memoryname=UFS',
@@ -255,7 +255,7 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
         ]
       },
       read: {
-        logLabel: `Reading XML: ${fileNames}`,
+        logLabel: `按 XML 读取：${fileNames}`,
         args: [
           `--port=\\\\.\\${port}`,
           `--sendxml=${xmlFilesArg}`,
@@ -274,12 +274,12 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
 
     logStep(operation.logLabel);
 
-    await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
-    dialog.showMessageBox(mainWindow, { type: 'info', title: 'Success', message: 'Operation completed successfully' });
+  await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
+  dialog.showMessageBox(mainWindow, { type: 'info', title: '成功', message: '操作已成功完成' });
     return { success: true };
   } catch (error) {
-    log(`\n[ERROR] ${error.message}\n`);
-    dialog.showMessageBox(mainWindow, { type: 'error', title: 'Error', message: error.message });
+    log(`\n[错误] ${error.message}\n`);
+    dialog.showMessageBox(mainWindow, { type: 'error', title: '错误', message: error.message });
     return { success: false, error: error.message };
   }
 });
@@ -296,42 +296,42 @@ rebootContexts.set('edl', { cmd: '<?xml version="1.0" ?><data><power value="rese
 
 async function prepareMiscFlash(port, txtValue) {
   if (!port) {
-    throw new Error('Port is required to update misc partition');
+    throw new Error('更新 misc 分区需要端口信息');
   }
 
   if (typeof txtValue !== 'string' || txtValue.trim().length === 0) {
-    throw new Error('TXT payload for misc partition is empty');
+    throw new Error('misc 分区的 TXT 负载为空');
   }
 
   if (!fs.existsSync(extractGptPath)) {
-    throw new Error('extract_gpt.exe not found in bin directory');
+    throw new Error('在 bin 目录中未找到 extract_gpt.exe');
   }
 
   const payloadBuffer = Buffer.from(txtValue, 'utf-8');
 
-  logStep('Preparing misc partition payload');
+  logStep('准备 misc 分区负载');
 
   fs.rmSync(TMP_DIR, { recursive: true, force: true });
   fs.mkdirSync(TMP_DIR, { recursive: true });
 
-  log(`\nWriting TXT payload to ${TMP_BIN}\n`);
+  log(`\n写入 TXT 负载到 ${TMP_BIN}\n`);
   fs.writeFileSync(TMP_BIN, payloadBuffer);
 
   const lunsRead = await readGptForRange(port, 1);
   if (lunsRead <= 0) {
-    throw new Error('Failed to acquire GPT data for LUN 0');
+    throw new Error('读取 LUN 0 的 GPT 数据失败');
   }
 
   const rawprogramPath = path.join(TMP_DIR, 'rawprogram0.xml');
   if (!fs.existsSync(rawprogramPath)) {
-    throw new Error('rawprogram0.xml not found; misc partition metadata is unavailable');
+    throw new Error('未找到 rawprogram0.xml；无法获取 misc 分区元数据');
   }
 
   const rawprogramContent = fs.readFileSync(rawprogramPath, 'utf-8');
   const miscMatch = rawprogramContent.match(/<program\b[^>]*\blabel="misc"[^>]*>/i);
 
   if (!miscMatch) {
-    throw new Error('misc partition entry not located in GPT data');
+    throw new Error('在 GPT 数据中未找到 misc 分区条目');
   }
 
   const miscTag = miscMatch[0];
@@ -348,7 +348,7 @@ async function prepareMiscFlash(port, txtValue) {
   const num_partition_sectors = getAttr('num_partition_sectors') || '0';
 
   if (!sectorSize || !totalSectors || !startSector) {
-    throw new Error('Invalid misc partition metadata');
+    throw new Error('misc 分区元数据无效');
   }
 
   const miscXmlPath = path.join(TMP_DIR, 'rawprogram_misc.xml');
@@ -361,7 +361,7 @@ async function prepareMiscFlash(port, txtValue) {
   ].join('\n');
   fs.writeFileSync(miscXmlPath, miscXmlContent);
 
-  logStep('Flashing misc partition update');
+  logStep('写入 misc 分区更新');
   await runCommand(`"${fhLoaderPath}"`, [
     `--port=\\\\.\\${port}`,
     `--search_path=${TMP_DIR}`,
@@ -376,12 +376,12 @@ async function prepareMiscFlash(port, txtValue) {
 ipcMain.handle('reboot-device', async (event, { port, mode }) => {
   try {
     if (!port) {
-      throw new Error('Port is required for reboot operation');
+      throw new Error('重启操作需要端口信息');
     }
 
     const context = rebootContexts.get(mode);
     if (!context) {
-      throw new Error(`Unsupported reboot mode: ${mode}`);
+      throw new Error(`不支持的重启模式：${mode}`);
     }
 
     const hasTxt = context.txt || null;
@@ -390,7 +390,7 @@ ipcMain.handle('reboot-device', async (event, { port, mode }) => {
       await prepareMiscFlash(port, hasTxt);
     }
 
-    logStep(`Rebooting device to: ${mode}`);
+  logStep(`正在重启到：${mode}`);
 
     fs.writeFileSync(CMD_XML, context.cmd);
 
@@ -402,7 +402,7 @@ ipcMain.handle('reboot-device', async (event, { port, mode }) => {
 
     return { success: true };
   } catch (error) {
-    log(`\n[ERROR] ${error.message}\n`);
+    log(`\n[错误] ${error.message}\n`);
     return { success: false, error: error.message };
   }
 });
@@ -428,7 +428,7 @@ async function readGptForRange(port, maxLun) {
   let validLuns = 0;
 
   for (let lun = 0; lun < maxLun; lun++) {
-    log(`\n--- Reading LUN ${lun} ---\n`);
+  log(`\n--- 正在读取 LUN ${lun} ---\n`);
 
     const tmpBinPath = path.join(TMP_DIR, `gpt_main${lun}.bin`);
     const readGptXml = `
@@ -451,12 +451,12 @@ async function readGptForRange(port, maxLun) {
       ], BIN_DIR);
 
       if (isFileBlank(tmpBinPath)) {
-        log(`LUN ${lun}: File is blank or invalid, skipping.\n`);
+        log(`LUN ${lun}：文件为空或无效，跳过。\n`);
         continue;
       }
 
-      log(`LUN ${lun}: GPT data read successfully (${fs.statSync(tmpBinPath).size} bytes)\n`);
-      log(`Extracting partition table for LUN ${lun}...\n`);
+  log(`LUN ${lun}：GPT 数据读取成功（${fs.statSync(tmpBinPath).size} 字节）\n`);
+  log(`正在提取 LUN ${lun} 的分区表...\n`);
 
       await runCommand(`"${extractGptPath}"`, [
         `gpt_main${lun}.bin`,
@@ -465,9 +465,9 @@ async function readGptForRange(port, maxLun) {
 
       validLuns++;
     } catch (error) {
-      log(`\n[WARNING] Failed to read LUN ${lun}: ${error.message}\n`);
+      log(`\n[警告] 读取 LUN ${lun} 失败：${error.message}\n`);
       if (lun === maxLun - 1) {
-        log(`LUN ${lun} failed, this is expected if device has fewer partitions.\n`);
+        log(`LUN ${lun} 读取失败，如果设备分区较少这是正常情况。\n`);
       }
       break;
     }
@@ -478,14 +478,14 @@ async function readGptForRange(port, maxLun) {
 
 ipcMain.handle('read-gpt', async (event, { port }) => {
   try {
-    logStep('Reading Partition Table (GPT)');
+    logStep('读取分区表（GPT）');
 
     fs.rmSync(TMP_DIR, { recursive: true, force: true });
     fs.mkdirSync(TMP_DIR, { recursive: true });
 
-    // Check if extract_gpt.exe exists
+    // 检查 extract_gpt.exe 是否存在
     if (!fs.existsSync(extractGptPath)) {
-      throw new Error('extract_gpt.exe not found in bin directory');
+      throw new Error('在 bin 目录中未找到 extract_gpt.exe');
     }
 
     const maxLun = 6;
@@ -495,16 +495,16 @@ ipcMain.handle('read-gpt', async (event, { port }) => {
       return;
     }
 
-    logStep(`GPT Reading Complete - ${validLuns} LUN(s) processed`);
-    log(`\nPartition table data saved to: ${TMP_DIR}\n`);
-    log('Check the tmp directory for extracted partition information.\n');
+  logStep(`GPT 读取完成 - 已处理 ${validLuns} 个 LUN`);
+  log(`\n分区表数据已保存到：${TMP_DIR}\n`);
+  log('请在 tmp 目录中查看提取的分区信息。\n');
 
     // Open the directory in file explorer
     shell.openPath(TMP_DIR);
 
     return { success: true, lunsRead: validLuns };
   } catch (error) {
-    log(`\n[ERROR] ${error.message}\n`);
+    log(`\n[错误] ${error.message}\n`);
     return { success: false, error: error.message };
   }
 });
@@ -541,7 +541,7 @@ function logToFile(message) {
   try {
     fs.appendFileSync(LOG_FILE, message);
   } catch (err) {
-    console.error('Failed to write to log file:', err);
+    console.error('写入日志文件失败：', err);
   }
 }
 

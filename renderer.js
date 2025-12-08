@@ -348,3 +348,24 @@ async function loadDefaultFiles() {
 
 findPort();
 loadDefaultFiles();
+
+// About Modal Logic
+const aboutBtn = document.getElementById('about-btn');
+const aboutModal = document.getElementById('about-modal');
+const closeBtn = document.querySelector('.close-btn');
+
+if (aboutBtn && aboutModal && closeBtn) {
+  aboutBtn.addEventListener('click', () => {
+    aboutModal.style.display = 'block';
+  });
+
+  closeBtn.addEventListener('click', () => {
+    aboutModal.style.display = 'none';
+  });
+
+  window.addEventListener('click', (event) => {
+    if (event.target == aboutModal) {
+      aboutModal.style.display = 'none';
+    }
+  });
+}
