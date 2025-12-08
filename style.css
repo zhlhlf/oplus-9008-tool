@@ -42,6 +42,7 @@ body {
   padding-right: 10px;
 }
 
+
 .left-panel h2 {
   color: red;
   font-size: 25px;
@@ -52,6 +53,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+}
+
+.right-panel::-webkit-scrollbar {
+  display: none;
 }
 
 h1 {
@@ -183,6 +188,7 @@ button {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
 
 .progress-container {
   width: 100%;

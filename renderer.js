@@ -217,13 +217,12 @@ async function parseAndDisplayXml(filePaths) {
           for (let i = 0; i < programs.length; i++) {
             const prog = programs[i];
             const label = prog.getAttribute('label') || '-';
-            const filename = prog.getAttribute('filename') || '-';
-            const startSector = prog.getAttribute('start_sector') || '-';
+            const filename = prog.getAttribute('filename') || '';
             const numSectors = prog.getAttribute('num_partition_sectors') || '-';
             
-            let sizeKB = '-';
+            let sizeKB = '';
             if (numSectors !== '-' && !isNaN(numSectors)) {
-              sizeKB = (parseInt(numSectors) * 512 / 1024).toFixed(2);
+              sizeKB = parseInt(numSectors) * 4;
             }
 
             const row = document.createElement('tr');
