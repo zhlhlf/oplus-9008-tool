@@ -2,16 +2,16 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>欧加真9008 Tool by zhlhlf</title>
+  <title>欧加真9008 工具 by zhlhlf</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1 class="app-title">欧加真9008 Tool by zhlhlf</h1>
+  <h1 class="app-title">欧加真9008 工具 by zhlhlf</h1>
   <div class="container">
     <div class="left-panel">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h2 style="margin: 0;">logs</h2>
-        <button id="clear-logs-btn" class="small-btn">clean</button>
+  <h2 style="margin: 0;">日志</h2>
+  <button id="clear-logs-btn" class="small-btn">清空</button>
       </div>
       <div id="logs"></div>
     </div>
@@ -19,35 +19,35 @@
     <div class="right-panel">
       
       <div class="section compact">
-        <h2>1. Connection & Initialization</h2>
+        <h2>1. 连接与初始化</h2>
         <div class="form-group">
-          <label>Port:</label>
-          <span id="port-display">Searching...</span>
+          <label>端口：</label>
+          <span id="port-display">搜索中...</span>
           <button id="refresh-port" class="small-btn">刷新</button>
         </div>
 
         <div class="form-group">
-          <label>DevPrg:</label>
+          <label>DevPrg：</label>
           <input type="text" id="devprg-path" readonly placeholder="选择 devprg 文件" style="cursor: pointer;">
         </div>
 
         <div class="form-group">
-          <label>Digest:</label>
+          <label>Digest：</label>
           <input type="text" id="digest-path" readonly placeholder="选择 digest 文件" style="cursor: pointer;">
         </div>
 
         <div class="form-group">
-          <label>Signature:</label>
+          <label>签名：</label>
           <input type="text" id="sig-path" readonly placeholder="选择 signature 文件" style="cursor: pointer;">
         </div>
 
-        <button id="start-btn" class="primary-btn compact-btn">Connect & Initialize</button>
+        <button id="start-btn" class="primary-btn compact-btn">连接并初始化</button>
       </div>
 
       <div class="section compact" id="xml-section">
-        <h2>2. XML Operations</h2>
+        <h2>2. XML 操作</h2>
         <div class="form-group">
-          <label>XML File:</label>
+          <label>XML 文件：</label>
           <input type="text" id="xml-path" readonly placeholder="选择 XML 文件 (例如 rawprogram0.xml)" style="cursor: pointer;">
         </div>
         
@@ -56,9 +56,9 @@
             <table id="xml-table">
               <thead>
                 <tr>
-                  <th>Label</th>
-                  <th>Filename</th>
-                  <th>size(kb)</th>
+                  <th>标签</th>
+                  <th>文件名</th>
+                  <th>大小(KB)</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -67,19 +67,19 @@
         </div>
 
         <div style="display: flex; gap: 10px;">
-          <button id="read-xml-btn" data-xml-mode="read" class="secondary-btn compact-btn" style="background-color: #edbebe;">read by xml</button>
-          <button id="run-xml-btn" data-xml-mode="run" class="secondary-btn compact-btn" style="background-color: #170000; color: #ff0000; border-color: #ff0000;">write by xml</button>
+          <button id="read-xml-btn" data-xml-mode="read" class="secondary-btn compact-btn" style="background-color: #edbebe;">按 XML 读取</button>
+          <button id="run-xml-btn" data-xml-mode="run" class="secondary-btn compact-btn" style="background-color: #170000; color: #ff0000; border-color: #ff0000;">按 XML 写入</button>
         </div>
       </div>
 
       <div class="section compact" id="control-section">
-        <h2>3. Device Control</h2>
+        <h2>3. 设备控制</h2>
         <div class="button-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-          <button id="reboot-btn" class="secondary-btn compact-btn">Reboot</button>
-          <button id="reboot-recovery-btn" class="secondary-btn compact-btn">Reboot to Recovery</button>
-          <button id="reboot-fastboot-btn" class="secondary-btn compact-btn">Reboot to Fastboot</button>
-          <button id="reboot-edl-btn" class="secondary-btn compact-btn">Reboot to EDL</button>
-          <button id="read-gpt-btn" class="secondary-btn compact-btn">Read Partition Table</button>
+          <button id="reboot-btn" class="secondary-btn compact-btn">重启</button>
+          <button id="reboot-recovery-btn" class="secondary-btn compact-btn">重启到恢复模式</button>
+          <button id="reboot-fastboot-btn" class="secondary-btn compact-btn">重启到 Fastboot</button>
+          <button id="reboot-edl-btn" class="secondary-btn compact-btn">重启到 EDL</button>
+          <button id="read-gpt-btn" class="secondary-btn compact-btn">读取分区表</button>
         </div>
       </div>
     </div>

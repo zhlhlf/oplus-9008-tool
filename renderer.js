@@ -33,22 +33,22 @@ window.api.onPortUpdate((port) => {
     // log(`Device connected on ${port}`); 
   } else {
     currentPort = null;
-    portDisplay.textContent = 'Not found';
+    portDisplay.textContent = '未发现设备';
     // log('Device disconnected');
   }
 });
 
 async function findPort() {
   // Manual check still useful for initial load
-  portDisplay.textContent = 'Searching...';
+  portDisplay.textContent = '搜索中...';
   const port = await window.api.findPort();
   if (port) {
     currentPort = port;
     portDisplay.textContent = port;
-    log(`Found device on ${port}`);
+    log(`已发现设备：${port}`);
   } else {
     currentPort = null;
-    portDisplay.textContent = 'Not found';
+    portDisplay.textContent = '未发现设备';
   }
 }
 
@@ -56,7 +56,6 @@ document.getElementById('refresh-port').addEventListener('click', findPort);
 
 document.getElementById('clear-logs-btn').addEventListener('click', () => {
   logsDiv.innerHTML = '';
-  log('Logs cleared');
 });
 
 let selectedXmlFiles = [];
@@ -64,15 +63,15 @@ let selectedXmlFiles = [];
 const xmlOperationConfigs = {
   run: {
     mode: 'run',
-    logPrefix: 'Running XML command with files: ',
-    successLog: 'XML command executed successfully.',
-    errorPrefix: 'Error running XML'
+    logPrefix: '执行 XML 写入，文件：',
+    successLog: 'XML 写入完成。',
+    errorPrefix: '执行 XML 写入出错'
   },
   read: {
     mode: 'read',
-    logPrefix: 'Reading data with files: ',
-    successLog: 'Read operation completed successfully.',
-    errorPrefix: 'Error during read operation'
+    logPrefix: '按 XML 读取，文件：',
+    successLog: '读取完成。',
+    errorPrefix: '读取过程中出错'
   }
 };
 
@@ -88,7 +87,7 @@ function resolveXmlFiles() {
 
 async function handleXmlOperation(mode) {
   if (!currentPort) {
-    alert('Please connect a device first.');
+    alert('请先连接设备。');
     return;
   }
 
@@ -97,7 +96,7 @@ async function handleXmlOperation(mode) {
   const filesToRun = resolveXmlFiles();
 
   if (filesToRun.length === 0) {
-    alert('Please select an XML file.');
+    alert('请选择 XML 文件。');
     return;
   }
 
@@ -113,7 +112,7 @@ async function handleXmlOperation(mode) {
   if (result.success) {
     log(operation.successLog);
   } else {
-    log(`${operation.errorPrefix}: ${result.error}`);
+    log(`${operation.errorPrefix}：${result.error}`);
   }
 }
 
@@ -189,11 +188,11 @@ async function parseAndDisplayXml(filePaths) {
   xmlPreview.style.display = 'none';
 
   for (const filePath of paths) {
-      log(`Reading XML: ${filePath}`);
+      log(`读取 XML：${filePath}`);
       const result = await window.api.readFileContent(filePath);
       
       if (!result.success) {
-        log(`Error reading file: ${result.error}`);
+        log(`读取文件出错：${result.error}`);
         continue;
       }
 
@@ -233,14 +232,14 @@ async function parseAndDisplayXml(filePaths) {
             `;
             xmlTableBody.appendChild(row);
           }
-          log(`Parsed ${programs.length} program entries from ${filePath}.`);
+          log(`解析到 ${programs.length} 个 program 条目（来自 ${filePath}）。`);
         } else {
            // ... patch logic ...
            const patches = xmlDoc.getElementsByTagName('patch');
            if (patches.length > 0) {
              // User requested NOT to show patch files in the list
              // So we do nothing here for the table
-             log(`Parsed ${patches.length} patch entries from ${filePath} (hidden from list).`);
+             log(`解析到 ${patches.length} 个 patch 条目（来自 ${filePath}，列表中隐藏）。`);
              
              // If this is the only file and it's a patch file, we might want to hide the table if it was empty
              // But if we have multiple files, we keep the table visible for others.
@@ -250,27 +249,27 @@ async function parseAndDisplayXml(filePaths) {
            } else {
              if (paths.length === 1) {
                 xmlPreview.style.display = 'none';
-                log('No <program> or <patch> tags found in XML.');
+                log('未在 XML 中找到 <program> 或 <patch> 标签。');
              }
            }
         }
       } catch (e) {
-        log(`Error parsing XML ${filePath}: ${e.message}`);
+        log(`解析 XML 出错 ${filePath}：${e.message}`);
       }
   }
 }
 
 document.getElementById('start-btn').addEventListener('click', async () => {
   if (!currentPort) {
-    alert('Please connect a device first.');
+    alert('请先连接设备。');
     return;
   }
  if(!devprgInput.value){
-    alert('Please select devprgInput required files.');
+    alert('请选择必须的 devprg 文件。');
     return;
  }
 
-  log('Starting initialization process...');
+  log('开始初始化...');
   const result = await window.api.startProcess({
     port: currentPort,
     devprg: devprgInput.value,
@@ -279,13 +278,13 @@ document.getElementById('start-btn').addEventListener('click', async () => {
   });
 
   if (result.success) {
-    log('Initialization successful!');
+    log('初始化成功！');
     // xmlSection.style.opacity = '1'; // No longer needed
     // xmlSection.style.pointerEvents = 'auto'; // No longer needed
-    alert('Initialization successful! You can now run XML commands.');
+    alert('初始化成功！现在可以执行 XML 命令。');
   } else {
-    log(`Error: ${result.error}`);
-    alert(`Initialization failed: ${result.error}`);
+    log(`错误：${result.error}`);
+    alert(`初始化失败：${result.error}`);
   }
 });
 
@@ -297,15 +296,15 @@ document.querySelectorAll('[data-xml-mode]').forEach((button) => {
 
 async function handleReboot(mode) {
   if (!currentPort) {
-    alert('Please connect a device first.');
+    alert('请先连接设备。');
     return;
   }
-  log(`Attempting to reboot to ${mode}...`);
+  log(`尝试重启到 ${mode}...`);
   const result = await window.api.rebootDevice({ port: currentPort, mode });
   if (result.success) {
-    log(`Reboot command sent (${mode}).`);
+    log(`重启指令已发送（${mode}）。`);
   } else {
-    log(`Error rebooting: ${result.error}`);
+    log(`重启失败：${result.error}`);
   }
 }
 
@@ -316,22 +315,22 @@ document.getElementById('reboot-edl-btn').addEventListener('click', () => handle
 
 document.getElementById('read-gpt-btn').addEventListener('click', async () => {
   if (!currentPort) {
-    alert('Please connect a device first.');
+    alert('请先连接设备。');
     return;
   }
-  log('Reading partition table from all LUNs...');
-  log('This may take a few minutes...\n');
+  log('正在从所有 LUN 读取分区表...');
+  log('这可能需要几分钟...\n');
   
   const result = await window.api.readGPT({ port: currentPort });
   
   if (result.success) {
-    log(`\n✓ Partition table read successfully!`);
-    log(`✓ Processed ${result.lunsRead} LUN(s)`);
-    log(`✓ Check bin/tmp/ directory for extracted partition data\n`);
-    alert(`GPT read complete! ${result.lunsRead} LUN(s) processed.\nCheck the logs and bin/tmp/ directory for results.`);
+    log(`\n✓ 分区表读取成功！`);
+    log(`✓ 已处理 ${result.lunsRead} 个 LUN`);
+    log(`✓ 请查看 bin/tmp/ 目录中的提取数据\n`);
+    alert(`GPT 读取完成！已处理 ${result.lunsRead} 个 LUN。\n请查看日志和 bin/tmp/ 目录中的结果。`);
   } else {
-    log(`\n✗ Error reading partition table: ${result.error}\n`);
-    alert(`Failed to read partition table: ${result.error}`);
+    log(`\n✗ 读取分区表出错：${result.error}\n`);
+    alert(`读取分区表失败：${result.error}`);
   }
 });
 
@@ -342,9 +341,8 @@ async function loadDefaultFiles() {
     devprgInput.value = files.devprg;
     digestInput.value = files.digest;
     sigInput.value = files.sig;
-    log('Default files loaded from bin/res');
   } catch (error) {
-    log(`Error loading default files: ${error.message}`);
+    log(`加载默认文件出错：${error.message}`);
   }
 }
 
