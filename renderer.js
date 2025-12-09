@@ -8,6 +8,29 @@ const xmlSection = document.getElementById('xml-section');
 const xmlPreview = document.getElementById('xml-preview');
 const xmlTableBody = document.querySelector('#xml-table tbody');
 const xmlSearchInput = document.getElementById('xml-search-input');
+const toastContainer = document.getElementById('toast-container');
+
+function showToast(message, duration = 3000) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  
+  toastContainer.appendChild(toast);
+  
+  // Trigger reflow
+  void toast.offsetWidth;
+  
+  toast.classList.add('show');
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300); // Wait for transition to finish
+  }, duration);
+}
 
 let currentPort = null;
 
@@ -98,7 +121,7 @@ function getDirName(filePath) {
 
 async function handleXmlOperation(mode) {
   if (!currentPort) {
-    alert('请先连接设备。');
+    showToast('请先连接设备。');
     return;
   }
 
@@ -115,7 +138,7 @@ async function handleXmlOperation(mode) {
     if (inputFiles.length > 0) {
       await parseAndDisplayXml(inputFiles, false); // Parse silently
     } else {
-      alert('请选择 XML 文件并确保列表已加载。');
+      showToast('请选择 XML 文件并确保列表已加载。');
       return;
     }
   }
@@ -133,7 +156,7 @@ async function handleXmlOperation(mode) {
   log(`已选择 ${selectedItems.length} 个分区进行操作。`);
 
   if (selectedItems.length === 0) {
-    alert('请至少勾选一个要操作的分区。');
+    showToast('请至少勾选一个要操作的分区。');
     return;
   }
 
@@ -157,7 +180,7 @@ async function handleXmlOperation(mode) {
   }
 
   if (filesToRun.length === 0) {
-    alert('请选择 XML 文件。');
+    showToast('请选择 XML 文件。');
     return;
   }
 
@@ -263,7 +286,7 @@ document.getElementById('show-xml-list-btn').addEventListener('click', () => {
     if (files.length > 0) {
       parseAndDisplayXml(files, true);
     } else {
-      alert('请先选择 XML 文件。');
+      showToast('请先选择 XML 文件。');
     }
   }
 });
@@ -346,16 +369,23 @@ async function parseAndDisplayXml(filePaths, showModal = true) {
           tdCheck.appendChild(checkbox);
 
           const tdLabel = document.createElement('td');
-          tdLabel.textContent = label;
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'table-text-chip';
+          labelSpan.textContent = label;
+          tdLabel.appendChild(labelSpan);
 
           const tdFilename = document.createElement('td');
-          tdFilename.textContent = filename;
+          const filenameSpan = document.createElement('span');
+          filenameSpan.className = 'table-text-chip filename-chip';
+          filenameSpan.textContent = filename;
+          tdFilename.appendChild(filenameSpan);
+          
           tdFilename.style.cursor = 'pointer';
           tdFilename.title = '点击选择文件';
           tdFilename.addEventListener('click', async () => {
             const newFile = await selectFile(null, false); // Pass null as input element to just get path
             if (newFile) {
-              tdFilename.textContent = newFile.split(/[\\/]/).pop(); // Show only filename
+              filenameSpan.textContent = newFile.split(/[\\/]/).pop(); // Show only filename
               attributes['filename'] = newFile; // Update stored attribute
               // Also update the full path if needed, or just keep filename relative/absolute as per logic
               // Assuming we want to store the full path for XML generation later
@@ -370,7 +400,10 @@ async function parseAndDisplayXml(filePaths, showModal = true) {
           });
 
           const tdSize = document.createElement('td');
-          tdSize.textContent = sizeKB;
+          const sizeSpan = document.createElement('span');
+          sizeSpan.className = 'table-text-chip';
+          sizeSpan.textContent = sizeKB;
+          tdSize.appendChild(sizeSpan);
 
           row.appendChild(tdCheck);
           row.appendChild(tdLabel);
@@ -427,11 +460,11 @@ async function parseAndDisplayXml(filePaths, showModal = true) {
 
 document.getElementById('start-btn').addEventListener('click', async () => {
   if (!currentPort) {
-    alert('请先连接设备。');
+    showToast('请先连接设备。');
     return;
   }
   if (!devprgInput.value) {
-    alert('请选择必须的 devprg 文件。');
+    showToast('请选择必须的 devprg 文件。');
     return;
   }
 
@@ -447,10 +480,10 @@ document.getElementById('start-btn').addEventListener('click', async () => {
     log('初始化成功！');
     // xmlSection.style.opacity = '1'; // No longer needed
     // xmlSection.style.pointerEvents = 'auto'; // No longer needed
-    alert('初始化成功！现在可以执行 XML 命令。');
+    showToast('初始化成功！现在可以执行 XML 命令。');
   } else {
     log(`错误：${result.error} `);
-    alert(`初始化失败：${result.error} `);
+    showToast(`初始化失败：${result.error} `);
   }
 });
 
@@ -462,7 +495,7 @@ document.querySelectorAll('[data-xml-mode]').forEach((button) => {
 
 async function handleReboot(mode) {
   if (!currentPort) {
-    alert('请先连接设备。');
+    showToast('请先连接设备。');
     return;
   }
   log(`尝试重启到 ${mode}...`);
@@ -481,7 +514,7 @@ document.getElementById('reboot-edl-btn').addEventListener('click', () => handle
 
 document.getElementById('read-gpt-btn').addEventListener('click', async () => {
   if (!currentPort) {
-    alert('请先连接设备。');
+    showToast('请先连接设备。');
     return;
   }
   log('正在从所有 LUN 读取分区表...');
@@ -492,10 +525,10 @@ document.getElementById('read-gpt-btn').addEventListener('click', async () => {
   if (result.success) {
     log(`\n✓ 分区表读取成功！`);
     log(`✓ 已处理 ${result.lunsRead} 个 LUN`);
-    alert(`GPT 读取完成！已处理 ${result.lunsRead} 个 LUN。`);
+    showToast(`GPT 读取完成！已处理 ${result.lunsRead} 个 LUN。`);
   } else {
     log(`\n✗ 读取分区表出错：${result.error} \n`);
-    alert(`读取分区表失败：${result.error} `);
+    showToast(`读取分区表失败：${result.error} `);
   }
 });
 

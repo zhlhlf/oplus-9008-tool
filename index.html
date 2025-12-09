@@ -50,12 +50,12 @@
         <div class="form-group">
           <label>XML 文件：</label>
           <input type="text" id="xml-path" readonly placeholder="选择 XML 文件 (例如 rawprogram0.xml)" style="cursor: pointer;">
-          <button id="show-xml-list-btn" class="small-btn" style="margin-left: 5px; background-color: rgb(154, 203, 203);">显示列表</button>
+          <button id="show-xml-list-btn" class="small-btn" style="margin-left: 5px;">显示列表</button>
         </div>
 
         <div style="display: flex; gap: 10px;">
-          <button id="read-xml-btn" data-xml-mode="read" class="secondary-btn compact-btn" style="background-color: #edbebe;">按 XML 读取</button>
-          <button id="run-xml-btn" data-xml-mode="run" class="secondary-btn compact-btn" style="background-color: #170000; color: #ff0000; border-color: #ff0000;">按 XML 写入</button>
+          <button id="read-xml-btn" data-xml-mode="read" class="secondary-btn compact-btn">按 XML 读取</button>
+          <button id="run-xml-btn" data-xml-mode="run" class="secondary-btn compact-btn">按 XML 写入</button>
         </div>
       </div>
 
@@ -105,11 +105,13 @@
         </table>
       </div>
       <div class="modal-footer">
-        <span class="hint-text">点击背景关闭窗口</span>
+        <mark>可以自由选择进行刷入或读写的标签</mark>
+        <mark style="color: chocolate;">点击背景关闭窗口</mark>
       </div>
     </div>
   </div>
 
+  <div id="toast-container" class="toast-container"></div>
   <script src="renderer.js"></script>
 </body>
 </html>

@@ -1,6 +1,10 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #000000;
+  background-image: url('bin/back.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   padding: 0;
   margin: 0;
   color: #333;
@@ -22,7 +26,6 @@ body {
 .container {
   max-width: 100%;
   margin: 0;
-  background: rgb(5, 0, 0);
   padding: 10px;
   border-radius: 0;
   box-shadow: none;
@@ -38,7 +41,6 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 300px;
-  border-right: 1px solid #eee;
   padding-right: 10px;
 }
 
@@ -113,57 +115,140 @@ input[type="text"]:read-only {
   cursor: default;
 }
 
+/* Apple Glassmorphism Button Styles */
 button {
-  padding: 4px 10px;
-  border: none;
-  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
   cursor: pointer;
-  background-color: #e0e0e0;
-  transition: background-color 0.2s;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.25px;
+
+  /* Glass Effect */
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  color: #333;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+button:active {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
 }
 
 #clear-logs-btn {
-  background-color: #c147fa;
+  background: rgba(255, 59, 48, 0.65) !important;
+  /* Apple Red */
+  color: white !important;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+#clear-logs-btn:hover {
+  background: rgba(255, 59, 48, 0.8) !important;
+  box-shadow: 0 8px 15px rgba(255, 59, 48, 0.3);
 }
 
 .small-btn {
-  padding: 4px 8px;
-  min-width: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
+  min-width: auto;
+  height: 28px;
+  border-radius: 8px;
 }
 
 .primary-btn {
-  background-color: #0078d4;
+  background: rgba(0, 122, 255, 0.65);
+  /* Apple Blue */
   color: white;
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   font-size: 14px;
   margin-top: 5px;
+  border: 1px solid rgba(0, 122, 255, 0.3);
+}
+
+.primary-btn:hover {
+  background: rgba(0, 122, 255, 0.8);
+  box-shadow: 0 8px 15px rgba(0, 122, 255, 0.3);
 }
 
 .secondary-btn {
-  background-color: #107c10;
+  background: rgba(52, 199, 89, 0.65);
+  /* Apple Green */
   color: white;
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   font-size: 14px;
   margin-top: 5px;
+  border: 1px solid rgba(52, 199, 89, 0.3);
+}
+
+.secondary-btn:hover {
+  background: rgba(52, 199, 89, 0.8);
+  box-shadow: 0 8px 15px rgba(52, 199, 89, 0.3);
+}
+
+/* Specific overrides for XML buttons to match Apple style */
+#show-xml-list-btn {
+  background: rgba(0, 122, 255, 0.65) !important;
+  color: white !important;
+  border: 1px solid rgba(0, 122, 255, 0.3);
+}
+
+#show-xml-list-btn:hover {
+  background: rgba(0, 122, 255, 0.8) !important;
+}
+
+#read-xml-btn {
+  background: rgba(255, 204, 0, 0.65) !important;
+  /* Apple Yellow */
+  color: #000 !important;
+  border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+#read-xml-btn:hover {
+  background: rgba(255, 204, 0, 0.8) !important;
+}
+
+#run-xml-btn {
+  background: rgba(255, 59, 48, 0.65) !important;
+  /* Apple Red */
+  color: white !important;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+#run-xml-btn:hover {
+  background: rgba(255, 59, 48, 0.8) !important;
 }
 
 #logs {
-  padding: 10px;
+  padding: 5px;
   flex: 1;
   overflow: auto;
   font-family: 'Consolas', monospace;
   border-radius: 10px;
   white-space: pre-wrap;
   font-size: 11px;
-  color: #c147fa;
+  color: #fa6b47;
   user-select: none;
   position: relative;
 }
 
-#logs > * {
+#logs>* {
   user-select: text;
 }
 
@@ -174,12 +259,14 @@ button {
 }
 
 #refresh-port {
-  background-color: #0078d4;
+  background: rgba(0, 122, 255, 0.65);
   color: white;
+  border: 1px solid rgba(0, 122, 255, 0.3);
 }
 
 #refresh-port:hover {
-  background-color: #106ebe;
+  background: rgba(0, 122, 255, 0.8);
+  box-shadow: 0 8px 15px rgba(0, 122, 255, 0.3);
 }
 
 .table-container {
@@ -242,51 +329,64 @@ tr:hover {
   top: 15px;
   right: 15px;
   padding: 6px 12px;
-  background-color: #e87e74;
+  background: rgba(142, 142, 147, 0.5);
+  /* Apple Gray */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  border-radius: 4px;
-  font-weight: bold;
+  border-radius: 12px;
+  font-weight: 500;
   z-index: 100;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .about-btn:hover {
-  background-color: #d65a4e;
+  background: rgba(142, 142, 147, 0.7);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 /* Modal Styles */
 .modal {
-  display: none; 
-  position: fixed; 
-  z-index: 1000; 
+  display: none;
+  position: fixed;
+  z-index: 1000;
   left: 0;
   top: 0;
-  width: 100%; 
-  height: 100%; 
-  overflow: auto; 
-  background-color: rgba(0,0,0,0.5); 
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
 }
 
 .modal-content {
   background-color: #fefefe;
-  margin: 10% auto; 
+  margin: 10% auto;
   padding: 25px;
   border: 1px solid #888;
-  width: 80%; 
+  width: 80%;
   max-width: 500px;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: #333;
   position: relative;
   animation: modalFadeIn 0.3s;
 }
 
 @keyframes modalFadeIn {
-  from {opacity: 0; transform: translateY(-20px);}
-  to {opacity: 1; transform: translateY(0);}
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .close-btn {
@@ -331,8 +431,11 @@ tr:hover {
   display: flex;
   flex-direction: column;
   max-height: 85vh;
-  padding: 0; /* Reset padding for flex layout */
+  padding: 0;
+  /* Reset padding for flex layout */
   overflow: hidden;
+  border-radius: 24px;
+  /* Increased border radius */
 }
 
 .modal-header {
@@ -374,20 +477,33 @@ tr:hover {
   padding: 0;
   border: none;
   border-radius: 0;
-  max-height: none; /* Override the default 200px limit */
+  max-height: none;
+  /* Override the default 200px limit */
 }
 
 .modal-footer {
   padding: 10px 20px;
   background-color: #f9f9f9;
   border-top: 1px solid #eee;
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.hint-text {
-  color: #888;
-  font-size: 12px;
+.modal-footer mark {
+  background-color: #e8f0fe;
+  /* Google Light Blue */
+  color: #1967d2;
+  /* Google Dark Blue */
+  padding: 6px 16px;
+  border-radius: 20px;
+  /* Capsule shape */
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
 
 /* Enhanced Table Styles */
 #xml-table {
@@ -408,25 +524,57 @@ tr:hover {
 }
 
 #xml-table td {
-  padding: 10px 15px;
+  padding: 8px 15px;
+  /* Reduced padding slightly */
   border-bottom: 1px solid #eee;
   vertical-align: middle;
   color: #444;
 }
 
-#xml-table tr:hover td {
-  background-color: #f0f8ff;
+.table-text-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background-color: #f1f3f4;
+  color: #3c4043;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
 
-/* Filename column specific */
-#xml-table td:nth-child(3) {
+.table-text-chip:hover {
+  background-color: #e8eaed;
+}
+
+/* Filename chip specific */
+.filename-chip {
   font-family: 'Consolas', 'Monaco', monospace;
-  color: #0078d4;
-  font-size: 13px;
+  color: #1a73e8;
+  /* Google Blue */
+  background-color: #e8f0fe;
+  /* Light Blue bg */
+}
+
+.filename-chip:hover {
+  background-color: #d2e3fc;
+}
+
+#xml-table tr:hover td {
+  background-color: #f8f9fa;
+  /* Lighter hover for row */
+}
+
+/* Filename column specific - override old styles */
+#xml-table td:nth-child(3) {
+  /* Reset old styles */
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
 }
 
 #xml-table td:nth-child(3):hover {
-  text-decoration: underline;
+  text-decoration: none;
+  /* Remove underline as chip handles hover */
 }
 
 /* Checkbox column */
@@ -437,13 +585,48 @@ tr:hover {
 
 /* XML Modal Specific Overrides */
 #xml-preview-modal {
-  overflow: hidden; /* Prevent scrolling on the modal background */
+  background-color: #d2e3fca0;
+  overflow: hidden;
+  /* Prevent scrolling on the modal background */
 }
 
 #xml-preview-modal .xml-modal-content {
-  margin: 7.5vh auto; /* Adjusted margin for better balance */
-  height: 85vh;     /* Reduced height */
+  background-color: #d2e3fc;
+
+  margin: 7.5vh auto;
+  /* Adjusted margin for better balance */
+  height: 85vh;
+  /* Reduced height */
   max-height: 85vh;
-  width: 85%;       /* Reduced width */
+  width: 85%;
+  /* Reduced width */
   max-width: 1100px;
+}
+
+/* Toast Notification */
+.toast-container {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: rgb(255, 97, 97);
+  padding: 12px 24px;
+  border-radius: 24px;
+  margin-top: 10px;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+
+.toast.show {
+  opacity: 1;
 }
