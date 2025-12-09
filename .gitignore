@@ -2,6 +2,7 @@ node_modules
 dist
 release
 bin/tmp
+bin/port_trace.txt
 bin/cmd.xml
 bin/res
 operation.log

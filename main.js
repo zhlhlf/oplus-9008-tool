@@ -154,8 +154,8 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
       // Remove manual quotes around paths, spawn handles escaping
       await runCommand(`"${qSaharaPath}"`, ['-p', `\\\\.\\${port}`, '-s', `13:${devprg}`], BIN_DIR);
 
-  }
-  logStep('继续初始化流程');
+    }
+    logStep('继续初始化流程');
 
     // 2. Send digest (if provided)
     if (digest) {
@@ -216,7 +216,7 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
       '--mainoutputdir=.\\'
     ], BIN_DIR);
 
-  logStep('初始化完成');
+    logStep('初始化完成');
     return { success: true };
   } catch (error) {
     log(`\n[错误] ${error.message}\n`);
@@ -224,31 +224,31 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
   }
 });
 
-ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => {
+ipcMain.handle('execute-xml', async (event, { port, xmlPath, searchPath, mode = 'run' }) => {
   try {
     if (!port) {
       throw new Error('Port is required for XML execution');
     }
-
     const xmlPaths = (Array.isArray(xmlPath) ? xmlPath : [xmlPath]).filter(Boolean);
     if (xmlPaths.length === 0) {
       throw new Error('XML path is required for XML execution');
     }
 
-    const searchPath = path.dirname(xmlPaths[0]);
+    const defaultSearchPath = path.dirname(xmlPaths[0]);
+    const finalSearchPath = searchPath || defaultSearchPath;
+
     const xmlFilesArg = xmlPaths.join(',');
     const fileNames = xmlPaths.map((p) => path.basename(p)).join(', ');
 
     const normalizedMode = typeof mode === 'string' ? mode.toLowerCase() : 'run';
     const resolvedMode = normalizedMode === 'read' ? 'read' : 'run';
-
     const operations = {
       run: {
         logLabel: `执行 XML 写入：${fileNames}`,
         args: [
           `--port=\\\\.\\${port}`,
           '--memoryname=UFS',
-          `--search_path=${searchPath}`,
+          `--search_path=${finalSearchPath}`,
           `--sendxml=${xmlFilesArg}`,
           '--special_rw_mode=oplus_gptbackup',
           '--noprompt'
@@ -261,7 +261,7 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
           `--sendxml=${xmlFilesArg}`,
           '--convertprogram2read',
           '--memoryname=ufs',
-          `--mainoutputdir=${searchPath}`,
+          `--mainoutputdir=${TMP_DIR}`,
           '--skip_configure',
           '--showpercentagecomplete',
           '--special_rw_mode=oplus_gptbackup',
@@ -273,9 +273,10 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, mode = 'run' }) => 
     const operation = operations[resolvedMode];
 
     logStep(operation.logLabel);
-
-  await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
-  dialog.showMessageBox(mainWindow, { type: 'info', title: '成功', message: '操作已成功完成' });
+    await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
+    dialog.showMessageBox(mainWindow, { type: 'info', title: '成功', message: '操作已成功完成' });
+    if (resolvedMode === 'read')
+      shell.openPath(TMP_DIR);
     return { success: true };
   } catch (error) {
     log(`\n[错误] ${error.message}\n`);
@@ -342,12 +343,11 @@ async function prepareMiscFlash(port, txtValue) {
   };
 
   const sectorSize = parseInt(getAttr('SECTOR_SIZE_IN_BYTES') || '512', 10);
-  const totalSectors = parseInt(getAttr('num_partition_sectors') || '0', 10);
   const startSector = getAttr('start_sector');
   const physicalPartition = getAttr('physical_partition_number') || '0';
   const num_partition_sectors = getAttr('num_partition_sectors') || '0';
 
-  if (!sectorSize || !totalSectors || !startSector) {
+  if (!sectorSize || !startSector) {
     throw new Error('misc 分区元数据无效');
   }
 
@@ -390,7 +390,7 @@ ipcMain.handle('reboot-device', async (event, { port, mode }) => {
       await prepareMiscFlash(port, hasTxt);
     }
 
-  logStep(`正在重启到：${mode}`);
+    logStep(`正在重启到：${mode}`);
 
     fs.writeFileSync(CMD_XML, context.cmd);
 
@@ -428,7 +428,7 @@ async function readGptForRange(port, maxLun) {
   let validLuns = 0;
 
   for (let lun = 0; lun < maxLun; lun++) {
-  log(`\n--- 正在读取 LUN ${lun} ---\n`);
+    log(`\n--- 正在读取 LUN ${lun} ---\n`);
 
     const tmpBinPath = path.join(TMP_DIR, `gpt_main${lun}.bin`);
     const readGptXml = `
@@ -455,8 +455,8 @@ async function readGptForRange(port, maxLun) {
         continue;
       }
 
-  log(`LUN ${lun}：GPT 数据读取成功（${fs.statSync(tmpBinPath).size} 字节）\n`);
-  log(`正在提取 LUN ${lun} 的分区表...\n`);
+      log(`LUN ${lun}：GPT 数据读取成功（${fs.statSync(tmpBinPath).size} 字节）\n`);
+      log(`正在提取 LUN ${lun} 的分区表...\n`);
 
       await runCommand(`"${extractGptPath}"`, [
         `gpt_main${lun}.bin`,
@@ -480,9 +480,7 @@ ipcMain.handle('read-gpt', async (event, { port }) => {
   try {
     logStep('读取分区表（GPT）');
 
-    fs.rmSync(TMP_DIR, { recursive: true, force: true });
-    fs.mkdirSync(TMP_DIR, { recursive: true });
-
+    cleanAndCreate(TMP_DIR);
     // 检查 extract_gpt.exe 是否存在
     if (!fs.existsSync(extractGptPath)) {
       throw new Error('在 bin 目录中未找到 extract_gpt.exe');
@@ -495,9 +493,9 @@ ipcMain.handle('read-gpt', async (event, { port }) => {
       return;
     }
 
-  logStep(`GPT 读取完成 - 已处理 ${validLuns} 个 LUN`);
-  log(`\n分区表数据已保存到：${TMP_DIR}\n`);
-  log('请在 tmp 目录中查看提取的分区信息。\n');
+    logStep(`GPT 读取完成 - 已处理 ${validLuns} 个 LUN`);
+    log(`\n分区表数据已保存到：${TMP_DIR}\n`);
+    log('请在 tmp 目录中查看提取的分区信息。\n');
 
     // Open the directory in file explorer
     shell.openPath(TMP_DIR);
@@ -560,4 +558,26 @@ function logStep(stepName) {
   const timestamp = new Date().toLocaleString();
   const msg = `\n[${timestamp}] === ${stepName} ===\n`;
   log(msg);
+}
+
+// Helper to save temp XML
+ipcMain.handle('save-temp-xml', async (event, content) => {
+  const tempPath = path.join(TMP_DIR, `rawprogram_generated_zhlhlf.xml`);
+  try {
+    cleanAndCreate(TMP_DIR);
+    fs.writeFileSync(tempPath, content, 'utf8');
+    log(`已保存生成的 XML 文件到：${tempPath}`);
+    return tempPath;
+  } catch (error) {
+    const msg = `保存临时 XML 失败：${error.message}`;
+    log(`[ERROR] ${msg}`);
+    throw new Error(msg);
+  }
+});
+
+function cleanAndCreate(dir) {
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(dir, { recursive: true });
 }

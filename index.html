@@ -50,21 +50,7 @@
         <div class="form-group">
           <label>XML 文件：</label>
           <input type="text" id="xml-path" readonly placeholder="选择 XML 文件 (例如 rawprogram0.xml)" style="cursor: pointer;">
-        </div>
-        
-        <div id="xml-preview" style="margin-bottom: 10px; display: none;">
-          <div class="table-container">
-            <table id="xml-table">
-              <thead>
-                <tr>
-                  <th>标签</th>
-                  <th>文件名</th>
-                  <th>大小(KB)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+          <button id="show-xml-list-btn" class="small-btn" style="margin-left: 5px; background-color: rgb(154, 203, 203);">显示列表</button>
         </div>
 
         <div style="display: flex; gap: 10px;">
@@ -94,6 +80,33 @@
       <p>1. 本工具仅供学习交流使用，请勿用于非法用途。</p>
       <p>2. 刷机有风险，操作需谨慎。使用本工具造成的任何设备损坏或数据丢失，作者概不负责。</p>
       <p>3. 请确保您拥有操作设备的所有权或已获得授权。</p>
+    </div>
+  </div>
+
+  <div id="xml-preview-modal" class="modal">
+    <div class="modal-content xml-modal-content">
+      <div class="modal-header">
+        <h2>XML 列表详情</h2>
+        <div class="search-box">
+          <input type="text" id="xml-search-input" placeholder="搜索标签 (Label)...">
+        </div>
+      </div>
+      <div class="table-container xml-table-container">
+        <table id="xml-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;"><input type="checkbox" id="select-all-xml"></th>
+              <th style="width: 150px;">标签</th>
+              <th>文件名 (点击选择)</th>
+              <th style="width: 100px;">大小(KB)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <span class="hint-text">点击背景关闭窗口</span>
+      </div>
     </div>
   </div>
 

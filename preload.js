@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('api', {
   getDefaultFiles: () => ipcRenderer.invoke('get-default-files'),
   onLog: (callback) => ipcRenderer.on('log', (event, value) => callback(value)),
   onPortUpdate: (callback) => ipcRenderer.on('port-update', (event, value) => callback(value)),
-  onProgress: (callback) => ipcRenderer.on('progress', (event, value) => callback(value))
+  onProgress: (callback) => ipcRenderer.on('progress', (event, value) => callback(value)),
+  saveTempXml: (content) => ipcRenderer.invoke('save-temp-xml', content)
 });
