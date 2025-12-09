@@ -533,6 +533,10 @@ ipcMain.handle('get-default-files', async () => {
   };
 });
 
+ipcMain.handle('get-background-image', () => {
+  return path.join(BIN_DIR, 'back.png');
+});
+
 const LOG_FILE = path.join(__dirname, 'operation.log');
 
 function logToFile(message) {

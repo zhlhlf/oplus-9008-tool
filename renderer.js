@@ -547,6 +547,16 @@ async function loadDefaultFiles() {
 findPort();
 loadDefaultFiles();
 
+// Set background image dynamically
+window.api.getBackgroundImage().then(imagePath => {
+  // Convert Windows path to a format usable in CSS url()
+  // We need to escape backslashes or use forward slashes
+  const cssPath = imagePath.replace(/\\/g, '/');
+  document.body.style.backgroundImage = `url('${cssPath}')`;
+}).catch(err => {
+  console.error('Failed to load background image:', err);
+});
+
 // About Modal Logic
 const aboutBtn = document.getElementById('about-btn');
 const aboutModal = document.getElementById('about-modal');
