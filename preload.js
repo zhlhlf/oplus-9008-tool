@@ -9,9 +9,9 @@ contextBridge.exposeInMainWorld('api', {
   readGPT: (data) => ipcRenderer.invoke('read-gpt', data),
   readFileContent: (filePath) => ipcRenderer.invoke('read-file-content', filePath),
   getDefaultFiles: () => ipcRenderer.invoke('get-default-files'),
-  getBackgroundImage: () => ipcRenderer.invoke('get-background-image'),
   onLog: (callback) => ipcRenderer.on('log', (event, value) => callback(value)),
   onPortUpdate: (callback) => ipcRenderer.on('port-update', (event, value) => callback(value)),
   onProgress: (callback) => ipcRenderer.on('progress', (event, value) => callback(value)),
-  saveTempXml: (content) => ipcRenderer.invoke('save-temp-xml', content)
+  saveTempXml: (content) => ipcRenderer.invoke('save-temp-xml', content),
+  exitApp: () => ipcRenderer.invoke('exit-app')
 });

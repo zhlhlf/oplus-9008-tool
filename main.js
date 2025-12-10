@@ -23,6 +23,9 @@ function createWindow() {
     height: 800,
     icon: iconPath,
     autoHideMenuBar: true, // Hide the menu bar
+    transparent: true,
+    frame: false,
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -222,6 +225,10 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
     log(`\n[错误] ${error.message}\n`);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle('exit-app', () => {
+  app.quit();
 });
 
 ipcMain.handle('execute-xml', async (event, { port, xmlPath, searchPath, mode = 'run' }) => {
@@ -531,10 +538,6 @@ ipcMain.handle('get-default-files', async () => {
     digest: getPath('digest'),
     sig: getPath('sig')
   };
-});
-
-ipcMain.handle('get-background-image', () => {
-  return path.join(BIN_DIR, 'back.png');
 });
 
 const LOG_FILE = path.join(__dirname, 'operation.log');
