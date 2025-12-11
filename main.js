@@ -524,6 +524,8 @@ ipcMain.handle('read-file-content', async (event, filePath) => {
 });
 
 ipcMain.handle('get-default-files', async () => {
+  cleanAndCreate(TMP_DIR);
+
   const RES_DIR = app.isPackaged
     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'bin', 'res')
     : path.join(__dirname, 'bin', 'res');
@@ -571,7 +573,6 @@ function logStep(stepName) {
 ipcMain.handle('save-temp-xml', async (event, content) => {
   const tempPath = path.join(TMP_DIR, `rawprogram_generated_zhlhlf.xml`);
   try {
-    cleanAndCreate(TMP_DIR);
     fs.writeFileSync(tempPath, content, 'utf8');
     log(`已保存生成的 XML 文件到：${tempPath}`);
     return tempPath;
@@ -584,7 +585,9 @@ ipcMain.handle('save-temp-xml', async (event, content) => {
 
 function cleanAndCreate(dir) {
   if (fs.existsSync(dir)) {
+    const stat = fs.statSync(dir);
     fs.rmSync(dir, { recursive: true, force: true });
+    if (stat.isFile()) return;
   }
   fs.mkdirSync(dir, { recursive: true });
 }

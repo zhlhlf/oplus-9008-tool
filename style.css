@@ -255,8 +255,8 @@ button:active {
   font-family: 'Consolas', monospace;
   border-radius: 10px;
   white-space: pre-wrap;
-  font-size: 11px;
-  color: #fa6b47;
+  font-size: 10px;
+  color: #1165ec;
   user-select: none;
   position: relative;
 }
@@ -388,7 +388,6 @@ tr:hover {
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   border-radius: 42px;
-
 }
 
 .modal-content {
@@ -398,7 +397,7 @@ tr:hover {
   border: 1px solid #888;
   width: 80%;
   max-width: 500px;
-  border-radius: 10px;
+  border-radius: 25px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: #333;
   position: relative;
@@ -621,8 +620,6 @@ tr:hover {
 }
 
 #xml-preview-modal .xml-modal-content {
-  background-color: #d2e3fc;
-
   margin: 7.5vh auto;
   /* Adjusted margin for better balance */
   height: 85vh;
