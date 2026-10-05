@@ -29,7 +29,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      backgroundThrottling: false
     }
   });
 
@@ -49,8 +50,14 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
+app.on('before-quit', () => {
+  if (logFlushTimer) clearTimeout(logFlushTimer);
+  flushLogs();
+  if (logStream) logStream.end();
+});
+
 // Helper to run commands
-function runCommand(command, args, cwd) {
+function runCommand(command, args, cwd, options = {}) {
   return new Promise((resolve, reject) => {
     // Remove surrounding quotes from command if present
     let executable = command;
@@ -60,6 +67,8 @@ function runCommand(command, args, cwd) {
 
     log(`\n> Executing: ${executable} ${args.join(' ')}\n`);
 
+    const parser = options.progress ? createProgressParser(options.progress) : null;
+
     // Handle .exe files using spawn
     const child = spawn(executable, args, {
       cwd,
@@ -67,13 +76,18 @@ function runCommand(command, args, cwd) {
     });
 
     if (child.stdout) {
-      child.stdout.on('data', (data) => log(data.toString()));
+      child.stdout.on('data', (data) => {
+        const text = data.toString();
+        log(text);
+        if (parser) parser.feed(text);
+      });
     }
     if (child.stderr) {
       child.stderr.on('data', (data) => log(data.toString()));
     }
 
     child.on('close', (code) => {
+      if (parser) parser.flush();
       if (code === 0) {
         resolve('Success');
       } else {
@@ -89,6 +103,180 @@ function runCommand(command, args, cwd) {
     });
 
   });
+}
+
+let lastRuleProgressMessage = null;
+
+function emitRuleProgress(message) {
+  if (message === lastRuleProgressMessage) return;
+  lastRuleProgressMessage = message;
+  logProgress(`  ${message}\n`);
+}
+
+let progressTotal = 0;
+let progressDone = 0;
+let progressLabel = '';
+let progressSpeed = '';
+
+function sendProgress(label) {
+  if (typeof label === 'string') progressLabel = label;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const percent = progressTotal > 0 ? Math.round((progressDone / progressTotal) * 100) : 0;
+  mainWindow.webContents.send('progress', {
+    percent,
+    done: progressDone,
+    total: progressTotal,
+    label: progressLabel,
+    speed: progressSpeed
+  });
+}
+
+function startProgress(total, label) {
+  progressTotal = total > 0 ? total : 0;
+  progressDone = 0;
+  progressSpeed = '';
+  sendProgress(label);
+}
+
+function advanceProgress(label) {
+  if (progressTotal > 0 && progressDone < progressTotal) progressDone++;
+  sendProgress(label);
+}
+
+function finishProgress(label) {
+  if (progressTotal > 0) progressDone = progressTotal;
+  sendProgress(label);
+}
+
+function normalizeSpeed(raw) {
+  const match = String(raw).trim().match(/([\d.]+)\s*([KMG]?Bps)/i);
+  if (!match || parseFloat(match[1]) === 0) return '';
+  const unit = match[2].toUpperCase().replace('BPS', 'B/s');
+  return `${match[1]} ${unit}`;
+}
+
+function setProgressSpeed(raw) {
+  const speed = normalizeSpeed(raw);
+  if (!speed || speed === progressSpeed) return;
+  progressSpeed = speed;
+  sendProgress();
+}
+
+// Parse fh_loader output and emit per-partition progress into the progress channel
+function createProgressParser({ mode = 'write', labels, rules = [], onProgress, onSpeed } = {}) {
+  const labelMap = labels || new Map();
+  const verb = mode === 'read' ? '读取' : '写入';
+  let buffer = '';
+  let activeFile = null;
+
+  const resolveLabel = (file) => {
+    const base = path.basename(file);
+    return labelMap.get(base) || labelMap.get(base.toLowerCase()) || base.replace(/\.[^.]+$/, '');
+  };
+
+  const finishActive = () => {
+    if (!activeFile) return;
+    const label = resolveLabel(activeFile);
+    logProgress(`\n✔ ${label} 分区${verb}完毕\n`);
+    activeFile = null;
+    if (typeof onProgress === 'function') onProgress(label);
+  };
+
+  const startFile = (file) => {
+    if (activeFile && path.basename(activeFile) === path.basename(file)) return;
+    finishActive();
+    activeFile = file;
+    logProgress(`\n${verb} ${resolveLabel(file)} 分区中...\n`);
+  };
+
+  const processLine = (line) => {
+    if (typeof onSpeed === 'function') {
+      const speedMatch = line.match(/Overall to target[^(]*\(([^)]*)\)/i);
+      if (speedMatch) onSpeed(speedMatch[1]);
+    }
+
+    for (const rule of rules) {
+      const ruleMatch = line.match(rule.re);
+      if (!ruleMatch) continue;
+      const message = rule.build ? rule.build(ruleMatch) : rule.re.source;
+      emitRuleProgress(message);
+      return;
+    }
+
+    let match = line.match(/In handleRead\(['"](.+?)['"]\)/);
+    if (match) {
+      startFile(match[1]);
+      return;
+    }
+    match = line.match(/In handleProgram\(['"](.+?)['"]\)/);
+    if (match) {
+      startFile(match[1]);
+      return;
+    }
+    match = line.match(/\{<program>\s*FILE:\s*'(.+?)'/);
+    if (match) {
+      const label = resolveLabel(match[1]);
+      if (activeFile && path.basename(activeFile) === path.basename(match[1])) {
+        activeFile = null;
+      }
+      logProgress(`\n✔ ${label} 分区写入完毕\n`);
+      if (typeof onProgress === 'function') onProgress(label);
+    }
+  };
+
+  return {
+    feed(chunk) {
+      buffer += chunk;
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop();
+      for (const line of lines) processLine(line);
+    },
+    flush() {
+      if (buffer) {
+        processLine(buffer);
+        buffer = '';
+      }
+      finishActive();
+    }
+  };
+}
+
+// Rules for the boot / initialization layer (Sahara handshake, VIP, signature)
+const INIT_PROGRESS_RULES = [
+  { re: /SAHARA_WAIT_HELLO/, build: () => '等待设备进入 Sahara 模式...' },
+  { re: /SAHARA_HELLO_RESPONSE/, build: () => 'Sahara 握手成功' },
+  { re: /SAHARA_READ_DATA/, build: () => '正在下发引导固件...' },
+  { re: /SAHARA_END_IMAGE_TX/, build: () => '引导固件下发完成' },
+  { re: /VIP is enabled/i, build: () => 'VIP 校验已启用' },
+  { re: /svip_check_permission ok/i, build: () => '签名校验通过' }
+];
+
+// Build a basename(filename) -> label map from the XML files being flashed
+function buildLabelMap(xmlPaths) {
+  const map = new Map();
+  const seen = new Set();
+  for (const xmlPath of xmlPaths) {
+    let content;
+    try {
+      content = fs.readFileSync(xmlPath, 'utf-8');
+    } catch (error) {
+      continue;
+    }
+    const regex = /<program\b[^>]*>/gi;
+    let match;
+    while ((match = regex.exec(content))) {
+      const tag = match[0];
+      const labelMatch = tag.match(/\blabel="([^"]*)"/i);
+      const fileMatch = tag.match(/\bfilename="([^"]*)"/i);
+      if (labelMatch && fileMatch) {
+        const base = path.basename(fileMatch[1]);
+        map.set(base, labelMatch[1]);
+        map.set(base.toLowerCase(), labelMatch[1]);
+        seen.add(base);
+      }
+    }
+  }
+  return { map, total: seen.size };
 }
 
 // Helper to find port
@@ -131,15 +319,79 @@ function startPortPolling() {
   }, 2000);
 }
 
-ipcMain.handle('select-file', async (event, { multiple = false } = {}) => {
-  const properties = ['openFile'];
-  if (multiple) {
-    properties.push('multiSelections');
+ipcMain.handle('select-file', async (event, { multiple = false, directory = false } = {}) => {
+  const properties = [];
+  if (directory) {
+    properties.push('openDirectory');
+  } else {
+    properties.push('openFile');
+    if (multiple) {
+      properties.push('multiSelections');
+    }
   }
   const result = await dialog.showOpenDialog(mainWindow, {
     properties
   });
+  if (result.canceled) {
+    return multiple ? [] : null;
+  }
   return multiple ? result.filePaths : result.filePaths[0];
+});
+
+const XML_FLASH_PREFIXES = ['rawprogram', 'patch', 'provision'];
+
+function isFlashXml(name) {
+  const lower = name.toLowerCase();
+  return lower.endsWith('.xml') && XML_FLASH_PREFIXES.some((prefix) => lower.startsWith(prefix));
+}
+
+function compareFlashXml(a, b) {
+  const pa = XML_FLASH_PREFIXES.findIndex((prefix) => a.toLowerCase().startsWith(prefix));
+  const pb = XML_FLASH_PREFIXES.findIndex((prefix) => b.toLowerCase().startsWith(prefix));
+  if (pa !== pb) return pa - pb;
+  const na = parseInt((a.match(/(\d+)/) || [])[1] || '0', 10);
+  const nb = parseInt((b.match(/(\d+)/) || [])[1] || '0', 10);
+  return na - nb || a.localeCompare(b);
+}
+
+function collectXmlFiles(paths) {
+  const files = [];
+  for (const p of paths) {
+    if (!p) continue;
+    let stat;
+    try {
+      stat = fs.statSync(p);
+    } catch (error) {
+      continue;
+    }
+    if (stat.isDirectory()) {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(p);
+      } catch (error) {
+        continue;
+      }
+      const matched = entries.filter((name) => {
+        try {
+          return fs.statSync(path.join(p, name)).isFile() && isFlashXml(name);
+        } catch (error) {
+          return false;
+        }
+      });
+      matched.sort(compareFlashXml);
+      for (const name of matched) {
+        files.push(path.join(p, name));
+      }
+    } else if (/\.xml$/i.test(p)) {
+      files.push(p);
+    }
+  }
+  return files;
+}
+
+ipcMain.handle('resolve-xml-selection', async (event, paths) => {
+  const list = Array.isArray(paths) ? paths : [paths];
+  return collectXmlFiles(list);
 });
 
 ipcMain.handle('find-port', async () => {
@@ -149,13 +401,25 @@ ipcMain.handle('find-port', async () => {
 ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => {
   try {
     logStep('开始初始化流程');
+    lastRuleProgressMessage = null;
+    logProgress('\n===== 引导初始化 =====\n');
+
+    let initTotal = 1;
+    if (devprg) initTotal++;
+    if (digest) initTotal++;
+    if (sig) initTotal++;
+    startProgress(initTotal, '初始化');
 
     // 1. Send device programmer (if provided)
     if (devprg) {
       logStep('发送设备程序（Device Programmer）');
+      logProgress('\n▶ 发送设备程序（DevPrg），等待设备握手...\n');
       const qSaharaPath = path.join(BIN_DIR, 'QSaharaServer.exe');
       // Remove manual quotes around paths, spawn handles escaping
-      await runCommand(`"${qSaharaPath}"`, ['-p', `\\\\.\\${port}`, '-s', `13:${devprg}`], BIN_DIR);
+      await runCommand(`"${qSaharaPath}"`, ['-p', `\\\\.\\${port}`, '-s', `13:${devprg}`], BIN_DIR, {
+        progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed }
+      });
+      advanceProgress('设备程序');
 
     }
     logStep('继续初始化流程');
@@ -163,12 +427,13 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
     // 2. Send digest (if provided)
     if (digest) {
       logStep('发送 Digest 并校验');
+      logProgress('\n▶ 发送 Digest 并校验...\n');
 
       await runCommand(`"${fhLoaderPath}"`, [
         `--port=\\\\.\\${port}`,
         `--signeddigests=${digest}`,
         '--testvipimpact', '--noprompt', '--skip_configure', '--mainoutputdir=.\\'
-      ], BIN_DIR);
+      ], BIN_DIR, { progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed } });
 
 
       // 3. Send verify command (grouped with digest)
@@ -179,19 +444,21 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
         `--port=\\\\.\\${port}`,
         '--sendxml=cmd.xml',
         '--noprompt', '--skip_configure', '--mainoutputdir=.\\'
-      ], BIN_DIR);
+      ], BIN_DIR, { progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed } });
+      advanceProgress('Digest');
 
     }
 
     // 4. Send sig (if provided)
     if (sig) {
       logStep('发送 Signature 并执行 Sha256Init');
+      logProgress('\n▶ 发送 Signature 并校验签名...\n');
 
       await runCommand(`"${fhLoaderPath}"`, [
         `--port=\\\\.\\${port}`,
         `--signeddigests=${sig}`,
         '--testvipimpact', '--noprompt', '--skip_configure', '--mainoutputdir=.\\'
-      ], BIN_DIR);
+      ], BIN_DIR, { progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed } });
 
 
       // 5. Send sha256init command (grouped with sig)
@@ -202,11 +469,13 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
         `--port=\\\\.\\${port}`,
         '--sendxml=cmd.xml',
         '--noprompt', '--skip_configure', '--mainoutputdir=.\\'
-      ], BIN_DIR);
+      ], BIN_DIR, { progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed } });
+      advanceProgress('Signature');
 
     }
 
     // 6. Configure (Always run at the end of init sequence)
+    logProgress('\n▶ 配置存储（UFS）...\n');
     const ConfigureContent = '<?xml version="1.0" ?><data><configure MemoryName="ufs" Verbose="0" AlwaysValidate="0" MaxDigestTableSizeInBytes="8192" MaxPayloadSizeToTargetInBytes="1048576" ZlpAwareHost="1" SkipStorageInit="0" /></data>';
 
     fs.writeFileSync(CMD_XML, ConfigureContent);
@@ -217,9 +486,12 @@ ipcMain.handle('start-process', async (event, { port, devprg, digest, sig }) => 
       '--memoryname=ufs',
       '--noprompt',
       '--mainoutputdir=.\\'
-    ], BIN_DIR);
+    ], BIN_DIR, { progress: { rules: INIT_PROGRESS_RULES, onSpeed: setProgressSpeed } });
+    advanceProgress('配置');
 
+    finishProgress('初始化完成');
     logStep('初始化完成');
+    logProgress('\n✔ 初始化完成，可以执行 XML 操作\n');
     return { success: true };
   } catch (error) {
     log(`\n[错误] ${error.message}\n`);
@@ -279,8 +551,18 @@ ipcMain.handle('execute-xml', async (event, { port, xmlPath, searchPath, mode = 
 
     const operation = operations[resolvedMode];
 
+    const { map: labelMap, total: partitionTotal } = buildLabelMap(xmlPaths);
     logStep(operation.logLabel);
-    await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR);
+    startProgress(partitionTotal, resolvedMode === 'read' ? '读取' : '写入');
+    await runCommand(`"${fhLoaderPath}"`, operation.args, BIN_DIR, {
+      progress: {
+        mode: resolvedMode,
+        labels: labelMap,
+        onProgress: (label) => advanceProgress(label),
+        onSpeed: setProgressSpeed
+      }
+    });
+    finishProgress(resolvedMode === 'read' ? '读取完成' : '写入完成');
     dialog.showMessageBox(mainWindow, { type: 'info', title: '成功', message: '操作已成功完成' });
     if (resolvedMode === 'read')
       shell.openPath(TMP_DIR);
@@ -431,7 +713,7 @@ function isFileBlank(filePath) {
   return true;
 }
 
-async function readGptForRange(port, maxLun) {
+async function readGptForRange(port, maxLun, options = {}) {
   let validLuns = 0;
 
   for (let lun = 0; lun < maxLun; lun++) {
@@ -456,6 +738,8 @@ async function readGptForRange(port, maxLun) {
         '--showpercentagecomplete',
         '--noprompt',
       ], BIN_DIR);
+
+      if (options.progress) advanceProgress(`LUN ${lun}`);
 
       if (isFileBlank(tmpBinPath)) {
         log(`LUN ${lun}：文件为空或无效，跳过。\n`);
@@ -494,7 +778,9 @@ ipcMain.handle('read-gpt', async (event, { port }) => {
     }
 
     const maxLun = 6;
-    const validLuns = await readGptForRange(port, maxLun);
+    startProgress(maxLun, '读取分区表');
+    const validLuns = await readGptForRange(port, maxLun, { progress: true });
+    finishProgress('读取分区表完成');
 
     if (validLuns === 0) {
       return;
@@ -535,32 +821,114 @@ ipcMain.handle('get-default-files', async () => {
     return fs.existsSync(p) ? p : '';
   };
 
+  const saved = readFileSelection();
+  const resolvePath = (key, name) => {
+    const savedPath = typeof saved[key] === 'string' ? saved[key] : '';
+    return savedPath && fs.existsSync(savedPath) ? savedPath : getPath(name);
+  };
+
   return {
-    devprg: getPath('devprg'),
-    digest: getPath('digest'),
-    sig: getPath('sig')
+    devprg: resolvePath('devprg', 'devprg'),
+    digest: resolvePath('digest', 'digest'),
+    sig: resolvePath('sig', 'sig')
   };
 });
 
-const LOG_FILE = path.join(__dirname, 'operation.log');
+const FILE_SELECTION_FILE = () => path.join(app.getPath('userData'), 'file-selection.json');
 
-function logToFile(message) {
+function readFileSelection() {
   try {
-    fs.appendFileSync(LOG_FILE, message);
-  } catch (err) {
-    console.error('写入日志文件失败：', err);
+    const data = JSON.parse(fs.readFileSync(FILE_SELECTION_FILE(), 'utf-8'));
+    return data && typeof data === 'object' ? data : {};
+  } catch (error) {
+    return {};
   }
 }
 
-function logToUi(message) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('log', message);
+function writeFileSelection(patch = {}) {
+  const current = readFileSelection();
+  const next = {
+    devprg: typeof patch.devprg === 'string' ? patch.devprg : (current.devprg || ''),
+    digest: typeof patch.digest === 'string' ? patch.digest : (current.digest || ''),
+    sig: typeof patch.sig === 'string' ? patch.sig : (current.sig || ''),
+    xml: Array.isArray(patch.xml) ? patch.xml.filter((p) => typeof p === 'string' && p) : (Array.isArray(current.xml) ? current.xml : [])
+  };
+  fs.writeFileSync(FILE_SELECTION_FILE(), JSON.stringify(next, null, 2), 'utf-8');
+}
+
+ipcMain.handle('save-file-selection', async (event, selection = {}) => {
+  try {
+    writeFileSelection(selection);
+    return { success: true };
+  } catch (error) {
+    log(`保存文件选择失败：${error.message}`);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-xml-selection', async (event, paths = []) => {
+  try {
+    writeFileSelection({ xml: Array.isArray(paths) ? paths : [paths] });
+    return { success: true };
+  } catch (error) {
+    log(`保存 XML 选择失败：${error.message}`);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-saved-xml', async () => {
+  const saved = readFileSelection();
+  return collectXmlFiles(Array.isArray(saved.xml) ? saved.xml : []);
+});
+
+const LOG_FILE = path.join(__dirname, 'operation.log');
+const LOG_FLUSH_INTERVAL = 100;
+
+let logStream = null;
+let pendingCoreLog = '';
+let pendingProgressLog = '';
+let logFlushTimer = null;
+
+function getLogStream() {
+  if (!logStream) {
+    logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+    logStream.on('error', (err) => console.error('写入日志文件失败：', err));
+  }
+  return logStream;
+}
+
+function scheduleLogFlush() {
+  if (!logFlushTimer) {
+    logFlushTimer = setTimeout(flushLogs, LOG_FLUSH_INTERVAL);
+  }
+}
+
+function flushLogs() {
+  logFlushTimer = null;
+  if (pendingCoreLog) {
+    getLogStream().write(pendingCoreLog);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('log', pendingCoreLog);
+    }
+    pendingCoreLog = '';
+  }
+  if (pendingProgressLog) {
+    getLogStream().write(pendingProgressLog);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('log-progress', pendingProgressLog);
+    }
+    pendingProgressLog = '';
   }
 }
 
 function log(message) {
-  logToFile(message);
-  logToUi(message);
+  pendingCoreLog += message;
+  scheduleLogFlush();
+}
+
+function logProgress(message) {
+  pendingProgressLog += message;
+  scheduleLogFlush();
 }
 
 function logStep(stepName) {

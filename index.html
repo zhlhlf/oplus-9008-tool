@@ -16,11 +16,18 @@
     </div>
     <div class="container">
       <div class="left-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;font-size: 22px;">logs</h2>
+        <div class="log-tabs">
+          <button class="log-tab active" data-log-tab="progress">日志</button>
+          <button class="log-tab" data-log-tab="core">核心日志</button>
           <button id="clear-logs-btn" class="small-btn">清空</button>
         </div>
-        <div id="logs"></div>
+        <div class="progress-row">
+          <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+          <span id="progress-text" class="progress-label">0%</span>
+          <span id="progress-speed" class="progress-speed"></span>
+        </div>
+        <div id="logs" class="log-view" style="display: none;"></div>
+        <div id="progress-logs" class="log-view"></div>
       </div>
 
       <div class="right-panel">
@@ -58,6 +65,7 @@
             <input type="text" id="xml-path" readonly placeholder="选择 XML 文件 (例如 rawprogram0.xml)"
               style="cursor: pointer;">
             <button id="show-xml-list-btn" class="small-btn" style="margin-left: 5px;">显示列表</button>
+            <button id="select-xml-folder-btn" class="small-btn" style="margin-left: 5px;">选择文件夹</button>
           </div>
 
           <div style="display: flex; gap: 10px;">
@@ -69,11 +77,11 @@
         <div class="section compact" id="control-section">
           <h2>3. 设备控制</h2>
           <div class="button-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-            <button id="reboot-btn" class="secondary-btn compact-btn">重启</button>
-            <button id="reboot-recovery-btn" class="secondary-btn compact-btn">重启到恢复模式</button>
-            <button id="reboot-fastboot-btn" class="secondary-btn compact-btn">重启到 Fastboot</button>
-            <button id="reboot-edl-btn" class="secondary-btn compact-btn">重启到 EDL</button>
-            <button id="read-gpt-btn" class="secondary-btn compact-btn">读取分区表</button>
+            <button id="reboot-reboot" class="secondary-btn compact-btn">重启</button>
+            <button id="reboot-recovery" class="secondary-btn compact-btn">重启到恢复模式</button>
+            <button id="reboot-fastboot" class="secondary-btn compact-btn">重启到 Fastboot</button>
+            <button id="reboot-edl" class="secondary-btn compact-btn">重启到 EDL</button>
+            <button id="read-gpt" class="secondary-btn compact-btn">读取分区表</button>
           </div>
         </div>
       </div>

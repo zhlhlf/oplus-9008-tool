@@ -34,11 +34,66 @@ function showToast(message, duration = 3000) {
 
 let currentPort = null;
 
+const MAX_LOG_CHARS = 300000;
+
+const progressLogsDiv = document.getElementById('progress-logs');
+const logChannels = {
+  core: { div: logsDiv, pending: '', chars: 0, timer: null },
+  progress: { div: progressLogsDiv, pending: '', chars: 0, timer: null }
+};
+
+function isLogChannelVisible(ch) {
+  return ch.div.style.display !== 'none';
+}
+
+function flushLogChannel(ch) {
+  ch.timer = null;
+  if (!ch.pending) return;
+  const atBottom = ch.div.scrollHeight - ch.div.scrollTop - ch.div.clientHeight < 24;
+  ch.div.appendChild(document.createTextNode(ch.pending));
+  ch.chars += ch.pending.length;
+  ch.pending = '';
+  while (ch.chars > MAX_LOG_CHARS && ch.div.firstChild) {
+    const first = ch.div.firstChild;
+    ch.chars -= first.nodeValue ? first.nodeValue.length : 0;
+    ch.div.removeChild(first);
+  }
+  if (atBottom) ch.div.scrollTop = ch.div.scrollHeight;
+}
+
+function pushLog(channelName, message) {
+  const ch = logChannels[channelName];
+  if (!ch) return;
+  ch.pending += message;
+  if (ch.pending.length > MAX_LOG_CHARS * 3) {
+    ch.pending = ch.pending.slice(-MAX_LOG_CHARS);
+  }
+  if (isLogChannelVisible(ch) && !ch.timer) {
+    ch.timer = setTimeout(() => flushLogChannel(ch), 100);
+  }
+}
+
+function setActiveLogChannel(name) {
+  if (!logChannels[name]) return;
+  for (const [key, ch] of Object.entries(logChannels)) {
+    ch.div.style.display = key === name ? '' : 'none';
+  }
+  document.querySelectorAll('.log-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.logTab === name);
+  });
+  flushLogChannel(logChannels[name]);
+}
+
+function clearLogs() {
+  for (const ch of Object.values(logChannels)) {
+    ch.div.innerHTML = '';
+    ch.pending = '';
+    ch.chars = 0;
+  }
+}
+
 function logRaw(message) {
-  const span = document.createElement('span');
-  span.textContent = message;
-  logsDiv.appendChild(span);
-  logsDiv.scrollTop = logsDiv.scrollHeight;
+  pushLog('core', message);
 }
 
 function log(message) {
@@ -46,7 +101,34 @@ function log(message) {
 }
 
 window.api.onLog((message) => {
-  logRaw(message);
+  pushLog('core', message);
+});
+
+window.api.onLogProgress((message) => {
+  pushLog('progress', message);
+});
+
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+const progressSpeed = document.getElementById('progress-speed');
+
+window.api.onProgress((data) => {
+  if (!data) return;
+  const percent = Math.max(0, Math.min(100, data.percent || 0));
+  progressFill.style.width = `${percent}%`;
+  let text = `${percent}%`;
+  if (data.total) {
+    text += `  ${data.done}/${data.total}`;
+  }
+  if (data.label) {
+    text += `  ${data.label}`;
+  }
+  progressText.textContent = text;
+  progressSpeed.textContent = data.speed || '';
+});
+
+document.querySelectorAll('.log-tab').forEach((tab) => {
+  tab.addEventListener('click', () => setActiveLogChannel(tab.dataset.logTab));
 });
 
 window.api.onPortUpdate((port) => {
@@ -78,9 +160,7 @@ async function findPort() {
 
 document.getElementById('refresh-port').addEventListener('click', findPort);
 
-document.getElementById('clear-logs-btn').addEventListener('click', () => {
-  logsDiv.innerHTML = '';
-});
+document.getElementById('clear-logs-btn').addEventListener('click', clearLogs);
 
 let selectedXmlFiles = [];
 let parsedXmlData = [];
@@ -240,11 +320,11 @@ function setupDragAndDrop(element, inputElement, multiple = false) {
     if (e.dataTransfer.files.length > 0) {
       if (multiple) {
         const files = Array.from(e.dataTransfer.files).map(f => f.path);
-        selectedXmlFiles = files;
-        inputElement.value = files.map(f => f.split(/[\\/]/).pop()).join(', ');
+        await applyXmlSelection(files, false);
       } else {
         const path = e.dataTransfer.files[0].path;
         inputElement.value = path;
+        persistFileSelection();
       }
     }
   });
@@ -256,16 +336,72 @@ setupDragAndDrop(digestInput, digestInput);
 setupDragAndDrop(sigInput, sigInput);
 setupDragAndDrop(xmlInput, xmlInput, true);
 
-devprgInput.addEventListener('click', () => selectFile(devprgInput));
-digestInput.addEventListener('click', () => selectFile(digestInput));
-sigInput.addEventListener('click', () => selectFile(sigInput));
+async function persistFileSelection() {
+  try {
+    await window.api.saveFileSelection({
+      devprg: devprgInput.value,
+      digest: digestInput.value,
+      sig: sigInput.value
+    });
+  } catch (error) {
+    log(`保存文件选择失败：${error.message} `);
+  }
+}
+
+devprgInput.addEventListener('click', async () => {
+  if (await selectFile(devprgInput)) persistFileSelection();
+});
+digestInput.addEventListener('click', async () => {
+  if (await selectFile(digestInput)) persistFileSelection();
+});
+sigInput.addEventListener('click', async () => {
+  if (await selectFile(sigInput)) persistFileSelection();
+});
+async function applyXmlSelection(paths, showModal = false, persist = true) {
+  const expanded = await window.api.resolveXmlSelection(paths);
+  const files = expanded && expanded.length ? expanded : paths.filter((p) => /\.xml$/i.test(p));
+  if (files.length === 0) {
+    showToast('未找到可用的 XML 文件。');
+    return false;
+  }
+  selectedXmlFiles = files;
+  xmlInput.value = files.map(f => f.split(/[\\/]/).pop()).join(', ');
+  isXmlParsed = false; // Reset flag when new files are selected
+  if (persist) {
+    try {
+      await window.api.saveXmlSelection(paths);
+    } catch (error) {
+      log(`保存 XML 选择失败：${error.message} `);
+    }
+  }
+  await parseAndDisplayXml(files, showModal);
+  return true;
+}
+
+async function loadSavedXml() {
+  try {
+    const saved = await window.api.getSavedXml();
+    if (saved && saved.length > 0) {
+      await applyXmlSelection(saved, false, false);
+      log(`已恢复上次的 XML 选择（${saved.length} 个文件）。`);
+    }
+  } catch (error) {
+    log(`恢复 XML 选择失败：${error.message} `);
+  }
+}
+
 xmlInput.addEventListener('click', async () => {
   const files = await selectFile(xmlInput, true);
   if (files) {
-    selectedXmlFiles = files;
-    xmlInput.value = files.map(f => f.split(/[\\/]/).pop()).join(', ');
-    isXmlParsed = false; // Reset flag when new files are selected
-    await parseAndDisplayXml(files, false); // Parse immediately but don't show modal
+    await applyXmlSelection(files, false);
+  }
+});
+
+document.getElementById('select-xml-folder-btn').addEventListener('click', async () => {
+  const dir = await window.api.selectFile({ directory: true });
+  if (!dir) return;
+  if (await applyXmlSelection([dir], true)) {
+    showToast(`已从文件夹载入 ${selectedXmlFiles.length} 个 XML 文件。`);
   }
 });
 
@@ -493,6 +629,7 @@ document.querySelectorAll('[data-xml-mode]').forEach((button) => {
   });
 });
 
+
 async function handleReboot(mode) {
   if (!currentPort) {
     showToast('请先连接设备。');
@@ -507,16 +644,7 @@ async function handleReboot(mode) {
   }
 }
 
-document.getElementById('reboot-btn').addEventListener('click', () => handleReboot('reboot'));
-document.getElementById('reboot-recovery-btn').addEventListener('click', () => handleReboot('recovery'));
-document.getElementById('reboot-fastboot-btn').addEventListener('click', () => handleReboot('fastboot'));
-document.getElementById('reboot-edl-btn').addEventListener('click', () => handleReboot('edl'));
-
-document.getElementById('read-gpt-btn').addEventListener('click', async () => {
-  if (!currentPort) {
-    showToast('请先连接设备。');
-    return;
-  }
+async function handleReadGPT() {
   log('正在从所有 LUN 读取分区表...');
   log('这可能需要几分钟...\n');
 
@@ -529,6 +657,16 @@ document.getElementById('read-gpt-btn').addEventListener('click', async () => {
   } else {
     log(`\n✗ 读取分区表出错：${result.error} \n`);
     showToast(`读取分区表失败：${result.error} `);
+  }
+}
+
+document.getElementById('read-gpt').addEventListener('click', handleReadGPT);
+
+// Bind the single handler to all control buttons
+['reboot-reboot', 'reboot-recovery', 'reboot-fastboot', 'reboot-edl'].forEach(id => {
+  const btn = document.getElementById(id);
+  if (btn) {
+    btn.addEventListener('click', () => handleReboot(id.replace('reboot-', '')));
   }
 });
 
@@ -546,6 +684,7 @@ async function loadDefaultFiles() {
 
 findPort();
 loadDefaultFiles();
+loadSavedXml();
 
 // About Modal Logic
 const aboutBtn = document.getElementById('about-btn');

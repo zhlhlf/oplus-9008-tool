@@ -248,21 +248,93 @@ button:active {
   background: rgba(255, 59, 48, 0.8) !important;
 }
 
-#logs {
+.log-view {
   padding: 5px;
   flex: 1;
+  min-height: 0;
   overflow: auto;
   font-family: 'Consolas', monospace;
   border-radius: 10px;
   white-space: pre-wrap;
   font-size: 10px;
   color: #1165ec;
-  user-select: none;
+  user-select: text;
   position: relative;
 }
 
-#logs>* {
+.log-view>* {
   user-select: text;
+}
+
+.log-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.log-tab {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #333;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.log-tab:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.log-tab.active {
+  background: rgba(0, 122, 255, 0.75);
+  color: #fff;
+}
+
+#clear-logs-btn {
+  margin-left: auto;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  flex: 0 0 120px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #34c759, #007aff);
+  transition: width 0.2s ease;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: #333;
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+
+.progress-speed {
+  font-size: 11px;
+  font-weight: 600;
+  color: #007aff;
+  white-space: nowrap;
+  min-width: 72px;
+  text-align: right;
 }
 
 #port-display {
